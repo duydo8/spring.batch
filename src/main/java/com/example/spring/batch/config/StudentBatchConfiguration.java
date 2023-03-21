@@ -19,6 +19,8 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @EnableBatchProcessing
@@ -32,10 +34,13 @@ public class StudentBatchConfiguration  {
     ) {
 
         Step step = stepBuilderFactory.get("ETL-file-load")
-                .<Student, Student>chunk(100)
+                .<Student, Student>chunk(999)
                 .reader(itemReader)
                 .processor(itemProcessor)
                 .writer(itemWriter)
+                .faultTolerant()
+                .retryLimit(3)
+                .retry(DeadlockLoserDataAccessException.class)
                 .build();
 
 
@@ -50,7 +55,7 @@ public class StudentBatchConfiguration  {
         FlatFileItemReader<Student> flatFileItemReader = new FlatFileItemReader<>();
         flatFileItemReader.setResource(new FileSystemResource("src/main/resources/1.csv"));
         flatFileItemReader.setName("CSV-Reader");
-        flatFileItemReader.setLinesToSkip(1);
+        flatFileItemReader.setLinesToSkip(0);
         flatFileItemReader.setLineMapper(lineMapper());
         return flatFileItemReader;
     }
